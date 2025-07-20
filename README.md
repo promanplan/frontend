@@ -6,8 +6,7 @@ PMP is built using Next.js, Tailwind CSS, Shadcn-ui, Magic-ui, Supabase, NextAut
 
 Watch the video below for a quick overview of PMP:
 
-https://github.com/DarkInventor/PMP/assets/67015517/e59b2402-772b-4ede-a28d-951278e6c555
-
+https://github.com/promanplan/frontend/public/video/output.mp4
 
 ## Environment Variables
 
@@ -49,23 +48,28 @@ STRIPE_WEBHOOK_SECRET=
 ## Setup Instructions
 
 1. **Clone the repository:**
+
    ```sh
    git clone https://github.com/DarkInventor/PMP.git
    cd PMP
    ```
 
 2. **Create and populate the `.env` file:**
+
    ```sh
    cp .env.example .env
    ```
+
    Edit the `.env` file and add your credentials.
 
 3. **Install dependencies:**
+
    ```sh
    pnpm install
    ```
 
 4. **Run the development server:**
+
    ```sh
    pnpm run dev
    ```
@@ -77,7 +81,7 @@ STRIPE_WEBHOOK_SECRET=
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](https://github.com/DarkInventor/PMP/blob/main/License.md) file for details.
+This project is licensed under the MIT License. See the [LICENSE]() file for details.
 
 ## Contributing
 

@@ -6,7 +6,7 @@ PMP is built using Next.js, Tailwind CSS, Shadcn-ui, Magic-ui, Supabase, NextAut
 
 Watch the video below for a quick overview of PMP:
 
-https://github.com/promanplan/frontend/public/video/output.mp4
+https://github.com/promanplan/frontend/blob/main/public/video/output.mp4
 
 ## Environment Variables
 

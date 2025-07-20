@@ -108,7 +108,6 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event, req: NextApiR
       data: {
         stripeSubscriptionId: subscription.id,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        hasPaid: true,
       },
     });
 
@@ -187,34 +186,14 @@ async function handleCheckoutCreation(req: NextApiRequest, res: NextApiResponse)
       where: { id: session.user.id },
     });
 
-    if (user && user.hasPaid) {
-      console.log("User has already paid.");
-    } else {
-      await db.user.update({
-        where: { id: session.user.id },
-        data: {    
-          hasPaid: true,
-        },
-      });
-      console.log("User payment status updated to true.");
-    }
-
-
     console.log("User found:", user);
-    // const invoice = event.data.object as Stripe.Invoice;
 
-    // const subscriptionId = invoice.subscription as string;
-    // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-    // const session = await getAuthSession(req, res);
     if (!session || !session.user || !session.user.id) {
       console.error("Failed to retrieve server session.");
       return;
     }
 
     console.log("Server session:", session);
-
-    
 
     res.status(200).json({ url: checkoutSession.url });
   } catch (err) {

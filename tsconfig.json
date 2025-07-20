@@ -24,6 +24,6 @@
       
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "pages/api/scrapper.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "temp_pages/api/scrapper.js"],
   "exclude": ["node_modules"]
 }

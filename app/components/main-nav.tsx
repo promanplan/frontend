@@ -82,7 +82,7 @@ export function MainNav() {
                         PMP
                       </div>
                       <p className="text-sm leading-tight text-muted-foreground">
-                        Some text should be here # TODO
+                        Build your startup with AI. <Link href="/create-project" className="text-primary hover:underline">Start creating now</Link>.
                       </p>
                     </a>
                   </NavigationMenuLink>
@@ -105,15 +105,15 @@ export function MainNav() {
                 Features
               </NavigationMenuLink>
             </Link>
-            <Link href="/bpmn-viewer" legacyBehavior passHref>
+            {/* <Link href="/bpmn-viewer" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 BPMN
               </NavigationMenuLink>
-            </Link>
+            </Link> */}
 
             <Link href="/pricing" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Price
+                Pricing
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>

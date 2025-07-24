@@ -359,7 +359,7 @@ export default function ProjectPage() {
                         <li><strong>CI/CD:</strong> Build pipelines, deployments</li>
                         <li><strong>Dependencies:</strong> Package management, vulnerabilities</li>
                       </ul>
-                      <p className="text-xs mt-2"><strong>Purpose:</strong> Manage and monitor your project's source code</p>
+                      <p className="text-xs mt-2"><strong>Purpose:</strong> Manage and monitor your project&apos;s source code</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -729,7 +729,7 @@ export default function ProjectPage() {
                         <TooltipContent className="max-w-sm p-3">
                           <div>
                             <h4 className="font-semibold text-cyan-500 mb-2">🔹 Source Code Repositories</h4>
-                            <p className="text-sm">Git repositories containing your project's source code:</p>
+                            <p className="text-sm">Git repositories containing your project&apos;s source code:</p>
                             <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
                               <li><strong>Main Repository</strong> - Primary codebase</li>
                               <li><strong>Frontend</strong> - UI/UX code</li>

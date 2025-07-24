@@ -21,7 +21,6 @@ import { Icons } from "@/components/icons";
 import { RequireAuth } from "@/components/require-auth";
 
 
-
 // Types for project and member
 interface Project {
     _id: string;
@@ -34,6 +33,7 @@ interface Project {
     apps: Array<{
       _id?: string;
       name: string;
+      info: { [key: string]: any };
       description: string;
       icon: string;
       created_at: string | Date;
@@ -43,6 +43,7 @@ interface Project {
     integrations: Array<{
       _id?: string;
       name: string;
+      info: { [key: string]: any };
       description: string;
       icon: string;
       created_at: string | Date;
@@ -52,6 +53,7 @@ interface Project {
     services: Array<{
       _id?: string;
       name: string;
+      info: { [key: string]: any };
       description: string;
       usage: string;
       comments: any[];
@@ -99,23 +101,29 @@ export default function ServicesPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
 
-  const headers = useMemo(() => ({
-    "Content-Type": "application/json",
-    // Add Authorization if needed
-    "Authorization": `Bearer ${localStorage.getItem("access_token")}`
-  }), []);
+  const headers = useMemo(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem("access_token") : null;
+    return {
+      "Content-Type": "application/json",
+      // Add Authorization if needed
+      "Authorization": `Bearer ${token}`
+    };
+  }, []);
+  
   useEffect(() => {
     const fetchProjectAndData = async () => {
       setLoading(true);
       setError(null);
       try {
         // Fetch all projects
-        const projectsRes = await fetch(`${process.env.NEXT_PUBLIC_SERVER_ADDRESS}/api/v1/projects/`, { headers: headers });
+        const projectsRes = await fetch(`${process.env.NEXT_PUBLIC_SERVER_ADDRESS}/api/v1/projects`, { headers: headers });
         if (projectsRes.ok) {
           const projectsData = await projectsRes.json();
           setProjects(projectsData);
         }else if (projectsRes.status === 401 || projectsRes.status === 403) {
-          localStorage.removeItem("access_token");
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem("access_token");
+          }
           router.push("/login");
           return;
         } else {
@@ -128,7 +136,9 @@ export default function ServicesPage() {
           const projectData = await projectRes.json();
           setProject(projectData);
         } else if (projectRes.status === 401 || projectRes.status === 403) {
-          localStorage.removeItem("access_token");
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem("access_token");
+          }
           router.push("/login");
           return;
         } else {
@@ -142,7 +152,9 @@ export default function ServicesPage() {
           const servicesData = await servicesRes.json();
           setServices(servicesData);
         } else if (servicesRes.status === 401 || servicesRes.status === 403) {
-          localStorage.removeItem("access_token");
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem("access_token");
+          }
           router.push("/login");
           return;
         } else {

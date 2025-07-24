@@ -26,6 +26,7 @@ interface Integration {
   comments: any[];
   created_at: string;
   updated_at: string;
+  image: string;
   status?: "Active" | "Inactive";
   endpoint?: string;
   type?: string;

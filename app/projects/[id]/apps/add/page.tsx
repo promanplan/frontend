@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -19,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { Icons } from "@/components/icons";
 import { RequireAuth } from "@/components/require-auth";
 
@@ -66,6 +67,23 @@ interface Project {
   members: string[];
 }
 
+const APP_TYPES = [
+  "Web Application",
+  "Mobile Application",
+  "Desktop Application",
+  "Progressive Web App",
+  "Single Page Application",
+  "Dashboard",
+  "Admin Panel",
+  "User Portal",
+  "E-commerce App",
+  "Content Management System",
+  "Analytics Dashboard",
+  "Communication App",
+  "Social Media App",
+  "Other"
+];
+
 export default function AddAppPage() {
   const params = useParams();
   const router = useRouter();
@@ -79,10 +97,50 @@ export default function AddAppPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    endpoint: "",
     type: "",
+    url: "",
+    version: "v1.0.0",
     secured: false,
+    status: "Active",
+    info: {
+      url: "",
+      type: "",
+      version: "v1.0.0",
+      secured: "false",
+      status: "Active",
+      framework: "",
+      platform: "Web",
+      build_tool: "",
+      repository_url: "",
+      deployment_url: "",
+      staging_url: "",
+      technology_stack: "",
+      responsive: "true",
+      pwa_enabled: "false",
+      offline_support: "false",
+      environment: "development"
+    } as { [key: string]: string },
   });
+
+  // Dynamic info fields
+  const [infoFields, setInfoFields] = useState<Array<{ key: string; value: string }>>([
+    { key: "url", value: "" },
+    { key: "type", value: "" },
+    { key: "version", value: "v1.0.0" },
+    { key: "secured", value: "false" },
+    { key: "status", value: "Active" },
+    { key: "framework", value: "" },
+    { key: "platform", value: "Web" },
+    { key: "build_tool", value: "" },
+    { key: "repository_url", value: "" },
+    { key: "deployment_url", value: "" },
+    { key: "staging_url", value: "" },
+    { key: "technology_stack", value: "" },
+    { key: "responsive", value: "true" },
+    { key: "pwa_enabled", value: "false" },
+    { key: "offline_support", value: "false" },
+    { key: "environment", value: "development" }
+  ]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -156,28 +214,64 @@ export default function AddAppPage() {
 
   const versions = ["v1"];
 
-  const appTypes = [
-    "Web Application",
-    "Mobile Application",
-    "Desktop Application",
-    "API Application",
-    "Microservice",
-    "Dashboard",
-    "Admin Panel",
-    "User Portal",
-    "E-commerce App",
-    "Content Management System",
-    "Analytics Dashboard",
-    "Communication App",
-    "Payment App",
-    "Other"
-  ];
-
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    // Update corresponding info field if it exists
+    if (field in formData.info) {
+      const newInfoFields = [...infoFields];
+      const fieldIndex = newInfoFields.findIndex(f => f.key === field);
+      if (fieldIndex !== -1) {
+        newInfoFields[fieldIndex].value = String(value);
+        setInfoFields(newInfoFields);
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        info: {
+          ...prev.info,
+          [field]: String(value)
+        }
+      }));
+    }
+  };
+
+  const handleInfoFieldChange = (index: number, field: 'key' | 'value', value: string) => {
+    const newInfoFields = [...infoFields];
+    newInfoFields[index][field] = value;
+    setInfoFields(newInfoFields);
+    
+    // Update formData.info
+    const newInfo: { [key: string]: string } = {};
+    newInfoFields.forEach(field => {
+      if (field.key && field.value) {
+        newInfo[field.key] = field.value;
+      }
+    });
+    setFormData(prev => ({ ...prev, info: newInfo }));
+  };
+
+  const addInfoField = () => {
+    setInfoFields([...infoFields, { key: "", value: "" }]);
+  };
+
+  const removeInfoField = (index: number) => {
+    if (infoFields.length > 1) {
+      const newInfoFields = infoFields.filter((_, i) => i !== index);
+      setInfoFields(newInfoFields);
+      
+      // Update formData.info
+      const newInfo: { [key: string]: string } = {};
+      newInfoFields.forEach(field => {
+        if (field.key && field.value) {
+          newInfo[field.key] = field.value;
+        }
+      });
+      setFormData(prev => ({ ...prev, info: newInfo }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -190,16 +284,18 @@ export default function AddAppPage() {
         "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
       };
       
+      const appData = {
+        name: formData.name,
+        description: formData.description,
+        info: formData.info,
+        icon: "app", // Default icon
+      };
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_ADDRESS}/api/v1/projects/${projectId}/apps`, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          endpoint: formData.endpoint,
-          type: formData.type,
-          secured: formData.secured,
-          icon: "app", // Default icon
+          apps: [appData]
         }),
       });
 
@@ -275,35 +371,25 @@ export default function AddAppPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">Description *</Label>
                         <Textarea
                           id="description"
                           value={formData.description}
                           onChange={(e) => handleInputChange("description", e.target.value)}
                           placeholder="Describe what this app does"
                           rows={3}
+                          required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="endpoint">App URL</Label>
-                        <Input
-                          id="endpoint"
-                          value={formData.endpoint}
-                          onChange={(e) => handleInputChange("endpoint", e.target.value)}
-                          placeholder="https://app.example.com"
-                          type="url"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="type">App Type</Label>
+                        <Label htmlFor="type">App Type *</Label>
                         <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select app type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {appTypes.map((type) => (
+                            {APP_TYPES.map((type) => (
                               <SelectItem key={type} value={type}>
                                 {type}
                               </SelectItem>
@@ -312,15 +398,90 @@ export default function AddAppPage() {
                         </Select>
                       </div>
 
-                      <div className="flex items-center space-x-2">
-                        <input
-                          id="secured"
-                          type="checkbox"
-                          checked={formData.secured}
-                          onChange={(e) => handleInputChange("secured", e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300"
+                      <div className="space-y-2">
+                        <Label htmlFor="url">App URL</Label>
+                        <Input
+                          id="url"
+                          value={formData.url}
+                          onChange={(e) => handleInputChange("url", e.target.value)}
+                          placeholder="https://app.example.com"
                         />
-                        <Label htmlFor="secured">Requires authentication</Label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="version">Version</Label>
+                          <Input
+                            id="version"
+                            value={formData.version}
+                            onChange={(e) => handleInputChange("version", e.target.value)}
+                            placeholder="v1.0.0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Active">Active</SelectItem>
+                              <SelectItem value="Inactive">Inactive</SelectItem>
+                              <SelectItem value="Development">Development</SelectItem>
+                              <SelectItem value="Testing">Testing</SelectItem>
+                              <SelectItem value="Maintenance">Maintenance</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="secured"
+                          checked={formData.secured}
+                          onCheckedChange={(checked: boolean) => handleInputChange("secured", checked)}
+                        />
+                        <Label htmlFor="secured">Secured (requires authentication)</Label>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label>Additional App Information</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addInfoField}
+                          >
+                            Add Field
+                          </Button>
+                        </div>
+                        {infoFields.map((field, index) => (
+                          <div key={index} className="flex gap-2 items-center">
+                            <Input
+                              placeholder="Key (e.g., framework, platform)"
+                              value={field.key}
+                              onChange={(e) => handleInfoFieldChange(index, 'key', e.target.value)}
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="Value"
+                              value={field.value}
+                              onChange={(e) => handleInfoFieldChange(index, 'value', e.target.value)}
+                              className="flex-1"
+                            />
+                            {index >= 16 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeInfoField(index)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                        ))}
                       </div>
 
                       <div className="flex gap-4 pt-4">

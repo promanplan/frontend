@@ -10,7 +10,9 @@ import {
   Info, 
   AppWindow, 
   Cable,
-  ArrowLeft
+  ArrowLeft,
+  Code,
+  GitBranch
 } from 'lucide-react';
 import Link from 'next/link';
 import { AppSidebar, SidebarNavItem } from "@/components/app-sidebar";
@@ -47,6 +49,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { RequireAuth } from "@/components/require-auth";
+import { CodebaseAgentWorkflow } from "@/components/codebase-agent-workflow";
 
 
 
@@ -71,6 +74,7 @@ interface Project {
   integrations: Array<{
     _id?: string;
     name: string;
+    image: string;
     description: string;
     icon: string;
     created_at: string | Date;
@@ -270,7 +274,7 @@ export default function ProjectPage() {
 
         <main className="p-6">
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-5 mb-6">
+            <TabsList className="grid grid-cols-6 mb-6">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <Info className="h-4 w-4" /> Overview
               </TabsTrigger>
@@ -331,6 +335,31 @@ export default function ProjectPage() {
                         <li>Monitoring services (Datadog, Sentry)</li>
                       </ul>
                       <p className="text-xs mt-2"><strong>Purpose:</strong> Extend functionality without building everything from scratch</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TabsTrigger>
+              <TabsTrigger value="codebase" className="flex items-center gap-2">
+                <Code className="h-4 w-4" /> Codebase
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="ml-1 cursor-help">
+                      <svg className="h-3 w-3 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm p-4">
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-cyan-500">🔹 Codebase</h4>
+                      <p className="text-sm">Source code repositories and development resources:</p>
+                      <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
+                        <li><strong>Repositories:</strong> Git repos, branches, commits</li>
+                        <li><strong>Code Quality:</strong> Test coverage, linting, security</li>
+                        <li><strong>CI/CD:</strong> Build pipelines, deployments</li>
+                        <li><strong>Dependencies:</strong> Package management, vulnerabilities</li>
+                      </ul>
+                      <p className="text-xs mt-2"><strong>Purpose:</strong> Manage and monitor your project's source code</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -657,7 +686,15 @@ export default function ProjectPage() {
                         <CardContent className="pt-6">
                           <div className="flex items-center mb-4">
                             <div className="p-2 rounded-lg bg-primary/10 mr-3">
-                              <Cable className="h-5 w-5 text-primary" />
+                              {integration.image ? (
+                                <img 
+                                  src={integration.image} 
+                                  alt={integration.name}
+                                  className="h-5 w-5 object-contain"
+                                />
+                              ) : (
+                                <Cable className="h-5 w-5 text-primary" />
+                              )}
                             </div>
                             <h3 className="font-medium">{integration.name}</h3>
                           </div>
@@ -668,6 +705,249 @@ export default function ProjectPage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Codebase Tab */}
+            <TabsContent value="codebase" className="space-y-6">
+              {/* Agent Workflow Section */}
+              <CodebaseAgentWorkflow projectName={project.name} />
+
+              {/* Repositories Section */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      Repositories
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <svg className="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm p-3">
+                          <div>
+                            <h4 className="font-semibold text-cyan-500 mb-2">🔹 Source Code Repositories</h4>
+                            <p className="text-sm">Git repositories containing your project's source code:</p>
+                            <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
+                              <li><strong>Main Repository</strong> - Primary codebase</li>
+                              <li><strong>Frontend</strong> - UI/UX code</li>
+                              <li><strong>Backend</strong> - Server-side logic</li>
+                              <li><strong>Mobile</strong> - Mobile app code</li>
+                            </ul>
+                            <p className="text-xs mt-2"><strong>Features:</strong> Branch management, commit history, code reviews</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </CardTitle>
+                    <CardDescription>Source code repositories for this project</CardDescription>
+                  </div>
+                  <Button size="sm">Connect Repository</Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-muted-foreground uppercase bg-muted/30">
+                        <tr>
+                          <th scope="col" className="px-6 py-3">Repository</th>
+                          <th scope="col" className="px-6 py-3">Language</th>
+                          <th scope="col" className="px-6 py-3">Last Commit</th>
+                          <th scope="col" className="px-6 py-3">Status</th>
+                          <th scope="col" className="px-6 py-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="bg-background border-b">
+                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
+                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {project.name}-frontend
+                          </th>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline">TypeScript</Badge>
+                          </td>
+                          <td className="px-6 py-4">2 hours ago</td>
+                          <td className="px-6 py-4">
+                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                              <Button variant="ghost" size="sm">View</Button>
+                              <Button variant="ghost" size="sm">Clone</Button>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr className="bg-background border-b">
+                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
+                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {project.name}-backend
+                          </th>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline">Python</Badge>
+                          </td>
+                          <td className="px-6 py-4">5 hours ago</td>
+                          <td className="px-6 py-4">
+                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                              <Button variant="ghost" size="sm">View</Button>
+                              <Button variant="ghost" size="sm">Clone</Button>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr className="bg-background border-b">
+                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
+                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {project.name}-mobile
+                          </th>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline">React Native</Badge>
+                          </td>
+                          <td className="px-6 py-4">1 day ago</td>
+                          <td className="px-6 py-4">
+                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                              <Button variant="ghost" size="sm">View</Button>
+                              <Button variant="ghost" size="sm">Clone</Button>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      Code Quality
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <svg className="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm p-3">
+                          <div>
+                            <h4 className="font-semibold text-blue-500 mb-2">🔹 Code Quality Metrics</h4>
+                            <p className="text-sm">Automated analysis of your codebase:</p>
+                            <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
+                              <li><strong>Test Coverage</strong> - % of code covered by tests</li>
+                              <li><strong>Code Smells</strong> - Maintainability issues</li>
+                              <li><strong>Security</strong> - Vulnerability scanning</li>
+                              <li><strong>Duplication</strong> - Repeated code blocks</li>
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </CardTitle>
+                    <CardDescription>Automated code analysis and metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Test Coverage</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-muted rounded-full h-2">
+                            <div className="bg-green-500 h-2 rounded-full" style={{ width: '85%' }}></div>
+                          </div>
+                          <span className="text-sm">85%</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Code Quality</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-500/10 text-green-500">A</Badge>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Security Score</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-muted rounded-full h-2">
+                            <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '70%' }}></div>
+                          </div>
+                          <span className="text-sm">70%</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Duplication</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">3.2%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      CI/CD Pipeline
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <svg className="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm p-3">
+                          <div>
+                            <h4 className="font-semibold text-purple-500 mb-2">🔹 CI/CD Pipeline</h4>
+                            <p className="text-sm">Continuous Integration and Deployment:</p>
+                            <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
+                              <li><strong>Build</strong> - Compile and package code</li>
+                              <li><strong>Test</strong> - Run automated tests</li>
+                              <li><strong>Deploy</strong> - Release to environments</li>
+                              <li><strong>Monitor</strong> - Track deployment health</li>
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </CardTitle>
+                    <CardDescription>Build and deployment pipeline status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Last Build</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-500/10 text-green-500">Success</Badge>
+                          <span className="text-xs text-muted-foreground">2h ago</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Production</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-500/10 text-green-500">Deployed</Badge>
+                          <span className="text-xs text-muted-foreground">v1.2.3</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Staging</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-blue-500/10 text-blue-500">Testing</Badge>
+                          <span className="text-xs text-muted-foreground">v1.2.4-rc</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Development</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-yellow-500/10 text-yellow-500">Building</Badge>
+                          <span className="text-xs text-muted-foreground">main</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* Documents Tab */}

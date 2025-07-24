@@ -119,7 +119,7 @@ export default function ProjectPage() {
           'Authorization': `Bearer ${localStorage.getItem("access_token")}`
         };
 
-        const ProjectsRes = await fetch(`${process.env.NEXT_PUBLIC_SERVER_ADDRESS}/api/v1/projects/`, { headers: headers});
+        const ProjectsRes = await fetch(`${process.env.NEXT_PUBLIC_SERVER_ADDRESS}/api/v1/projects`, { headers: headers});
         if (ProjectsRes.status === 401 || ProjectsRes.status === 403) {
           localStorage.removeItem("access_token");
           router.push("/login");

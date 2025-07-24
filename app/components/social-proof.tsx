@@ -1,11 +1,6 @@
 
 const companies = [
-    "Google",
-    "Microsoft",
-    "Amazon",
-    "Netflix",
-    "Uber",
-    "Spotify",
+    "unknown"
   ];
   
 

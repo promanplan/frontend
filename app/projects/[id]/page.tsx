@@ -710,7 +710,12 @@ export default function ProjectPage() {
             {/* Codebase Tab */}
             <TabsContent value="codebase" className="space-y-6">
               {/* Agent Workflow Section */}
-              <CodebaseAgentWorkflow projectName={project.name} />
+              <CodebaseAgentWorkflow 
+                projectName={project.name} 
+                projectId={projectId}
+                apps={(project.apps || []).map(a => a.name)}
+                services={(project.services || []).map(s => s.name)}
+              />
 
               {/* Repositories Section */}
               <Card>

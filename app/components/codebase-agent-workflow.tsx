@@ -396,7 +396,22 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
 
   const openTerminalWindow = (agentIdOrName: Agent['id'], component: string) => {
     const status = statusMap[`${agentIdOrName}|${component}`] || getAgentStatus(agentIdOrName, component);
-    const url = status?.container_url || 'http://localhost:8003/';
+    
+    // Construct the URL properly - container_url should be used as-is if it's a complete domain
+    let url = 'http://localhost:8003/'; // fallback
+    if (status?.container_url) {
+      // If container_url already starts with http/https, use it as-is
+      if (status.container_url.startsWith('http://') || status.container_url.startsWith('https://')) {
+        url = status.container_url;
+      } else {
+        // Otherwise, prepend https:// to the domain
+        url = `https://${status.container_url}`;
+      }
+    }
+    
+    console.log('container_url from backend:', status?.container_url);
+    console.log('final terminal url:', url);
+    
     const name = getAgentNameById(agentIdOrName, component) || String(agentIdOrName);
     setTermUrl(url);
     try {

@@ -20,10 +20,15 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/components/*": ["./app/components/*"],
-      
+      "@/components/*": ["./app/components/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "temp_pages/api/scrapper.js"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "temp_pages/api/scrapper.js"
+  ],
+  "exclude": ["node_modules", ".next", "tmp"]
 }

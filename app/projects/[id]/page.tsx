@@ -50,6 +50,7 @@ import {
 
 import { RequireAuth } from "@/components/require-auth";
 import { CodebaseAgentWorkflow } from "@/components/codebase-agent-workflow";
+import githubApi, { RepoInfo } from "@/lib/services/github";
 
 
 
@@ -114,6 +115,9 @@ export default function ProjectPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [ghRepos, setGhRepos] = useState<RepoInfo[]>([]);
+  const [ghLoading, setGhLoading] = useState(false);
+  const [ghError, setGhError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProjectAndMembers = async () => {
@@ -173,6 +177,31 @@ export default function ProjectPage() {
     };
     fetchProjectAndMembers();
   }, [projectId, router]);
+
+  useEffect(() => {
+    const ensureCookieAndFetchRepos = async () => {
+      try {
+        setGhLoading(true);
+        setGhError(null);
+        const storedId = typeof window !== 'undefined' ? localStorage.getItem('github_installation_id') : null;
+        if (storedId) {
+          await fetch('/api/github/installation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ installation_id: storedId }),
+          });
+        }
+        const data = await githubApi.getRepos();
+        setGhRepos(data.repos || []);
+      } catch (e: any) {
+        setGhError(e?.message || 'Failed to load repositories');
+      } finally {
+        setGhLoading(false);
+      }
+    };
+    ensureCookieAndFetchRepos();
+  }, []);
 
   const formatDate = (date: string | Date) => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -748,80 +777,47 @@ export default function ProjectPage() {
                     </CardTitle>
                     <CardDescription>Source code repositories for this project</CardDescription>
                   </div>
-                  <Button size="sm">Connect Repository</Button>
+                  <Button asChild size="sm">
+                    <Link href="/github/connect">Connect GitHub</Link>
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="relative overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-muted-foreground uppercase bg-muted/30">
-                        <tr>
-                          <th scope="col" className="px-6 py-3">Repository</th>
-                          <th scope="col" className="px-6 py-3">Language</th>
-                          <th scope="col" className="px-6 py-3">Last Commit</th>
-                          <th scope="col" className="px-6 py-3">Status</th>
-                          <th scope="col" className="px-6 py-3">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="bg-background border-b">
-                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
-                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {project.name}-frontend
-                          </th>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline">TypeScript</Badge>
-                          </td>
-                          <td className="px-6 py-4">2 hours ago</td>
-                          <td className="px-6 py-4">
-                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">View</Button>
-                              <Button variant="ghost" size="sm">Clone</Button>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr className="bg-background border-b">
-                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
-                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {project.name}-backend
-                          </th>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline">Python</Badge>
-                          </td>
-                          <td className="px-6 py-4">5 hours ago</td>
-                          <td className="px-6 py-4">
-                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">View</Button>
-                              <Button variant="ghost" size="sm">Clone</Button>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr className="bg-background border-b">
-                          <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
-                            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {project.name}-mobile
-                          </th>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline">React Native</Badge>
-                          </td>
-                          <td className="px-6 py-4">1 day ago</td>
-                          <td className="px-6 py-4">
-                            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">View</Button>
-                              <Button variant="ghost" size="sm">Clone</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    {ghLoading ? (
+                      <div className="flex justify-center items-center h-24 text-sm text-muted-foreground">Loading repositories…</div>
+                    ) : ghError ? (
+                      <div className="text-red-500 text-sm p-4">{ghError}</div>
+                    ) : ghRepos.length === 0 ? (
+                      <div className="text-sm text-muted-foreground p-4">No repositories connected. Use Connect GitHub to link your account.</div>
+                    ) : (
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-muted-foreground uppercase bg-muted/30">
+                          <tr>
+                            <th scope="col" className="px-6 py-3">Repository</th>
+                            <th scope="col" className="px-6 py-3">Default Branch</th>
+                            <th scope="col" className="px-6 py-3">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ghRepos.map((repo) => (
+                            <tr key={repo.id} className="bg-background border-b">
+                              <th scope="row" className="px-6 py-4 font-medium whitespace-nowrap flex items-center">
+                                <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+                                {repo.full_name}
+                              </th>
+                              <td className="px-6 py-4">{repo.default_branch || 'main'}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex space-x-2">
+                                  <Button asChild variant="ghost" size="sm">
+                                    <Link href={`https://github.com/${repo.full_name}`} target="_blank">View</Link>
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </CardContent>
               </Card>

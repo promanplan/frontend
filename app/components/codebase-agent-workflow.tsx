@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { TtyModal } from '@/components/tty-modal';
 
 interface Agent {
   id: string;
@@ -70,6 +71,7 @@ interface CoderBuildMessage {
 }
 
 interface AgentComponentStatus {
+  id?: string | number;
   agent_name: string;
   // Backend may return either `component` or `component_type` + `component_name`
   component?: string; // e.g., app:Name or service:Name
@@ -79,6 +81,9 @@ interface AgentComponentStatus {
   has_logs?: boolean;
   has_codebase?: boolean;
   codebase_url?: string;
+  container_id?: string;
+  container_url?: string;
+  has_build_button?: boolean;
   error?: string | null;
 }
 
@@ -91,62 +96,7 @@ interface DevcontainerLaunchResponse {
 
 export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }: CodebaseAgentWorkflowProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>([
-    {
-      id: 'frontend',
-      name: 'FrontendBot',
-      role: 'Frontend Developer',
-      status: 'idle',
-      currentTask: 'Ready to build UI components',
-      progress: 0,
-      avatar: '⚛️'
-    },
-    {
-      id: 'backend',
-      name: 'BackendBot',
-      role: 'Backend Developer',
-      status: 'idle',
-      currentTask: 'Standing by for API development',
-      progress: 0,
-      avatar: '🔧'
-    },
-    {
-      id: 'security',
-      name: 'SecurityBot',
-      role: 'Security Engineer',
-      status: 'idle',
-      currentTask: 'Preparing security audits',
-      progress: 0,
-      avatar: '🔒'
-    },
-    {
-      id: 'devops',
-      name: 'DevOpsBot',
-      role: 'DevOps Engineer',
-      status: 'idle',
-      currentTask: 'Setting up CI/CD pipelines',
-      progress: 0,
-      avatar: '⚙️'
-    },
-    {
-      id: 'tester',
-      name: 'TesterBot',
-      role: 'QA Engineer',
-      status: 'idle',
-      currentTask: 'Preparing test suites',
-      progress: 0,
-      avatar: '🧪'
-    },
-    {
-      id: 'cloud',
-      name: 'CloudBot',
-      role: 'Cloud Engineer',
-      status: 'idle',
-      currentTask: 'Configuring cloud infrastructure',
-      progress: 0,
-      avatar: '☁️'
-    }
-  ]);
+  const [agents, setAgents] = useState<Agent[]>([]);
 
   const [buildLogs, setBuildLogs] = useState<BuildLog[]>([]);
   const [currentPhase, setCurrentPhase] = useState('idle');
@@ -160,6 +110,46 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
   const [logsComponent, setLogsComponent] = useState<string | null>(null);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsMessages, setLogsMessages] = useState<CoderBuildMessage[]>([]);
+  const [ttyOpen, setTtyOpen] = useState(false);
+  const [ttyAgent, setTtyAgent] = useState<string | null>(null);
+  const [ttyComponent, setTtyComponent] = useState<string | null>(null);
+  const [termOpen, setTermOpen] = useState(false);
+  const [termUrl, setTermUrl] = useState<string | null>(null);
+  const [termTitle, setTermTitle] = useState<string>('ttyd');
+
+  // Helpers to resolve agent id/name using current statusMap
+  const getAgentStatus = (agentIdOrName: string, component?: string): AgentComponentStatus | undefined => {
+    // Try by id first
+    if (component) {
+      const byId = statusMap[`${agentIdOrName}|${component}`];
+      if (byId) return byId;
+    }
+    // Fallback: find any entry whose agent_name matches
+    const entry = Object.entries(statusMap).find(([key, s]) => {
+      if (component && !key.endsWith(`|${component}`)) return false;
+      return s.agent_name === agentIdOrName;
+    });
+    return entry ? entry[1] : undefined;
+  };
+
+  const resolveAgentId = (agentIdOrName: string, component?: string): string | undefined => {
+    // If it's already an id (exists in keys), return it
+    const isId = Object.keys(statusMap).some((k) => k.startsWith(`${agentIdOrName}|`));
+    if (isId) return agentIdOrName;
+    // Else find by name -> id
+    const entry = Object.keys(statusMap).find((k) => {
+      const [idPart] = k.split('|');
+      const s = statusMap[k];
+      if (component && !k.endsWith(`|${component}`)) return false;
+      return s.agent_name === agentIdOrName && !!idPart;
+    });
+    return entry ? entry.split('|')[0] : undefined;
+  };
+
+  const getAgentNameById = (agentIdOrName: string, component?: string): string | undefined => {
+    const s = getAgentStatus(agentIdOrName, component);
+    return s?.agent_name;
+  };
 
   const phases = [
     { name: 'Frontend Development', duration: 5000, agent: 'frontend' },
@@ -199,11 +189,61 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
         const s: AgentComponentStatus = item || {};
         const normalizedComponent = s.component
           || (s.component_type && s.component_name ? `${s.component_type}:${s.component_name}` : undefined);
-        if (!s.agent_name || !normalizedComponent) return;
-        const key = `${s.agent_name}|${normalizedComponent}`;
+        const agentKeyId = s?.id != null ? String(s.id) : s?.agent_name;
+        if (!agentKeyId || !normalizedComponent) return;
+        const key = `${agentKeyId}|${normalizedComponent}`;
         next[key] = { ...s, component: normalizedComponent } as AgentComponentStatus;
       });
       setStatusMap(next);
+
+      // Derive agents list and their overall status from fetched statuses
+      const groupedByAgent: Record<string, AgentComponentStatus[]> = {};
+      Object.entries(next).forEach(([key, s]) => {
+        const [agentId] = key.split('|');
+        if (!groupedByAgent[agentId]) groupedByAgent[agentId] = [];
+        groupedByAgent[agentId].push(s);
+      });
+
+      const roleByAgent: Record<string, string> = {
+        frontend: 'Frontend Developer',
+        backend: 'Backend Developer',
+        security: 'Security Engineer',
+        devops: 'DevOps Engineer',
+        tester: 'QA Engineer',
+        cloud: 'Cloud Engineer',
+      };
+      const avatarByAgent: Record<string, string> = {
+        frontend: '⚛️',
+        backend: '🔧',
+        security: '🔒',
+        devops: '⚙️',
+        tester: '🧪',
+        cloud: '☁️',
+      };
+
+      setAgents((prev) => {
+        const prevById = Object.fromEntries(prev.map((a) => [a.id, a]));
+        const derived: Agent[] = Object.keys(groupedByAgent).map((agentIdKey) => {
+          const group = groupedByAgent[agentIdKey] || [];
+          const statuses = group.map((g) => (g.status || '').toString());
+          let overall: Agent['status'] = 'idle';
+          if (statuses.some((s) => s === 'running')) overall = 'working';
+          else if (statuses.some((s) => s === 'error')) overall = 'error';
+          else if (statuses.some((s) => s === 'completed')) overall = 'completed';
+          const prevAgent = prevById[agentIdKey];
+          const displayName = group[0]?.agent_name || 'Agent';
+          return {
+            id: agentIdKey,
+            name: `${displayName}Bot`,
+            role: roleByAgent[displayName] || 'Agent',
+            status: overall,
+            currentTask: prevAgent?.currentTask || 'Standing by',
+            progress: prevAgent?.progress ?? 0,
+            avatar: avatarByAgent[displayName] || '🤖',
+          } as Agent;
+        });
+        return derived;
+      });
     } catch (e) {
       // ignore
     }
@@ -252,13 +292,18 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
 
   const fetchMessagesOnce = async (
     component: string,
-    agentName?: string,
+    agentIdOrName?: string,
   ): Promise<CoderBuildMessage[]> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
     const url = new URL(`${serverBaseUrl}/api/v1/coders/messages`);
     url.searchParams.set('project_id', projectId);
     url.searchParams.set('component', component);
-    if (agentName) url.searchParams.set('agent_name', agentName);
+    if (agentIdOrName) {
+      const resolvedId = resolveAgentId(agentIdOrName, component);
+      const resolvedName = getAgentNameById(agentIdOrName, component);
+      if (resolvedId) url.searchParams.set('agent_id', resolvedId);
+      if (resolvedName) url.searchParams.set('agent_name', resolvedName);
+    }
     const res = await fetch(url.toString(), {
       headers: {
         'Content-Type': 'application/json',
@@ -329,27 +374,49 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
     fetchStatuses();
   };
 
-  const openLogs = async (agentId: Agent['id'], component: string) => {
-    setLogsAgent(agentId);
+  const openLogs = async (agentIdOrName: Agent['id'], component: string) => {
+    setLogsAgent(getAgentNameById(agentIdOrName, component) || agentIdOrName);
     setLogsComponent(component);
     setLogsLoading(true);
     setLogsMessages([]);
     setLogsOpen(true);
     try {
-      const msgs = await fetchMessagesOnce(component, agentId);
+      const msgs = await fetchMessagesOnce(component, agentIdOrName);
       setLogsMessages(msgs || []);
     } finally {
       setLogsLoading(false);
     }
   };
 
-  const openCodebase = async (agentId: Agent['id'], component: string) => {
+  const openTty = (agentIdOrName: Agent['id'], component: string) => {
+    setTtyAgent(getAgentNameById(agentIdOrName, component) || agentIdOrName);
+    setTtyComponent(component);
+    setTtyOpen(true);
+  };
+
+  const openTerminalWindow = (agentIdOrName: Agent['id'], component: string) => {
+    const status = statusMap[`${agentIdOrName}|${component}`] || getAgentStatus(agentIdOrName, component);
+    const url = status?.container_url || 'http://localhost:8003/';
+    const name = getAgentNameById(agentIdOrName, component) || String(agentIdOrName);
+    setTermUrl(url);
     try {
-      addLog('info', `Launching devcontainer for ${component}...`, agentId);
+      const parsed = new URL(url);
+      setTermTitle(`ttyd — ${parsed.host}`);
+    } catch {
+      setTermTitle(`${name} — ${component}`);
+    }
+    setTermOpen(true);
+  };
+
+  const openCodebase = async (agentIdOrName: Agent['id'], component: string) => {
+    try {
+      const displayName = getAgentNameById(agentIdOrName, component) || String(agentIdOrName);
+      addLog('info', `Launching devcontainer for ${component}...`, displayName);
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const urlObj = new URL(`${serverBaseUrl}/api/v1/devcontainers/launch`);
       urlObj.searchParams.set('project_id', projectId);
-      urlObj.searchParams.set('agent_name', agentId);
+      // Devcontainer API expects agent_name; use display name from status
+      urlObj.searchParams.set('agent_name', displayName);
       urlObj.searchParams.set('component', component);
       const res = await fetch(urlObj.toString(), {
         method: 'POST',
@@ -358,23 +425,24 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
         },
       });
       if (!res.ok) {
-        addLog('error', `Failed to launch devcontainer for ${component}`, agentId);
+        addLog('error', `Failed to launch devcontainer for ${component}`, displayName);
         return;
       }
       const data = (await res.json()) as DevcontainerLaunchResponse;
       if (data?.url) {
         window.open(data.url, '_blank');
-        addLog('success', `Devcontainer ${data.status || 'ready'} for ${component}`, agentId);
+        addLog('success', `Devcontainer ${data.status || 'ready'} for ${component}`, displayName);
       } else {
-        addLog('warning', `Devcontainer launched but no URL returned for ${component}`, agentId);
+        addLog('warning', `Devcontainer launched but no URL returned for ${component}`, displayName);
       }
     } catch (e) {
-      addLog('error', `Error launching devcontainer for ${component}`, agentId);
+      const displayName = getAgentNameById(agentIdOrName, component) || String(agentIdOrName);
+      addLog('error', `Error launching devcontainer for ${component}`, displayName);
     }
   };
 
   const launchAgent = async (
-    agentName: Agent['id'],
+    agentIdOrName: Agent['id'],
     component: string,
     modelName = 'gpt-5',
     abortSignal?: AbortSignal,
@@ -383,7 +451,10 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const url = new URL(`${serverBaseUrl}/api/v1/coders/launch`);
       url.searchParams.set('project_id', projectId);
-      url.searchParams.set('agent_name', agentName);
+      const resolvedId = resolveAgentId(agentIdOrName, component);
+      if (resolvedId) {
+        url.searchParams.set('agent_id', resolvedId);
+      }
       url.searchParams.set('component', component);
       url.searchParams.set('model_name', modelName);
       // Use GET with query params; backend expects Query params
@@ -653,8 +724,12 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
             
             <Accordion type="single" collapsible className="w-full">
             {agents.map((agent) => {
-              const options = allowedComponentsForAgent(agent.id as Agent['id']);
+              // Build component options for this agent from fetched statuses
+              const options = Object.keys(statusMap)
+                .filter((k) => k.startsWith(`${agent.id}|`))
+                .map((k) => k.split('|')[1]);
               const selected = selectedComponentsByAgent[agent.id] || options[0] || null;
+              const selectedStatusObj = selected ? statusMap[`${agent.id}|${selected}`] : undefined;
               return (
                 <AccordionItem key={agent.id} value={agent.id} className="border rounded-lg p-0">
                   <div className="p-4">
@@ -694,15 +769,35 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex items-center">
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            disabled={!selected || agent.status === 'working'}
-                            onClick={() => selected && runSingleAgentBuild(agent.id as Agent['id'], selected)}
-                          >
-                            Build
-                          </Button>
+                        <div className="flex items-center gap-2">
+                          {!!selected && selectedStatusObj?.has_build_button && (
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => runSingleAgentBuild(agent.id as Agent['id'], selected)}
+                            >
+                              Build
+                            </Button>
+                          )}
+                          {!!selected && selectedStatusObj?.has_logs && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openTerminalWindow(agent.id as Agent['id'], selected)}
+                              className="flex items-center gap-1"
+                            >
+                              <Terminal className="h-3 w-3" />
+                              Open Terminal
+                            </Button>
+                          )}
+                          {!!selected && selectedStatusObj?.has_codebase && (
+                            <Button
+                              size="sm"
+                              onClick={() => openCodebase(agent.id as Agent['id'], selected)}
+                            >
+                              Open Codebase
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -713,34 +808,38 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
                           const s = statusMap[statusKey];
                           const hasLogs = !!s?.has_logs;
                           const hasCode = !!s?.has_codebase;
-                          const codeUrl = s?.codebase_url;
+                          const canBuild = !!s?.has_build_button;
                           return (
                             <div key={comp} className="flex items-center gap-2">
                               <div className="flex-1 text-sm">{comp}</div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => runSingleAgentBuild(agent.id as Agent['id'], comp)}
-                              >
-                                Build
-                              </Button>
+                              {canBuild && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => runSingleAgentBuild(agent.id as Agent['id'], comp)}
+                                >
+                                  Build
+                                </Button>
+                              )}
                               {hasLogs && (
                                 <Button
                                   size="sm"
-                                  onClick={async () => {
-                                    const msgs = await fetchMessagesOnce(comp, agent.id);
-                                    msgs.forEach((m) => addLog('info', m.message, m.agent_name));
-                                  }}
+                                  variant="outline"
+                                  onClick={() => openTerminalWindow(agent.id as Agent['id'], comp)}
+                                  className="flex items-center gap-1"
                                 >
-                                  See Logs
+                                  <Terminal className="h-3 w-3" />
+                                  Open Terminal
                                 </Button>
                               )}
-                              <Button
-                                size="sm"
-                                onClick={() => openCodebase(agent.id as Agent['id'], comp)}
-                              >
-                                Open Codebase
-                              </Button>
+                              {hasCode && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => openCodebase(agent.id as Agent['id'], comp)}
+                                >
+                                  Open Codebase
+                                </Button>
+                              )}
                             </div>
                           );
                         })}
@@ -844,6 +943,47 @@ export function CodebaseAgentWorkflow({ projectName, projectId, apps, services }
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Terminal Window Modal */}
+      <Sheet open={termOpen} onOpenChange={setTermOpen}>
+        <SheetContent className="sm:max-w-[90vw] w-[100vw] h-[90vh] !p-0 flex items-center justify-center">
+          <div className="w-full max-w-6xl h-[80vh] rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/10 dark:ring-white/10 bg-[#111]">
+            <div className="h-10 flex items-center px-4 gap-3 bg-[#1b1b1b] border-b border-black/20">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3.5 w-3.5 rounded-full bg-[#ff5f56]" />
+                <span className="inline-block h-3.5 w-3.5 rounded-full bg-[#ffbd2e]" />
+                <span className="inline-block h-3.5 w-3.5 rounded-full bg-[#27c93f]" />
+              </div>
+              <div className="ml-3 text-xs text-neutral-400 truncate">{termTitle}</div>
+            </div>
+            <div className="relative h-[calc(100%-2.5rem)] bg-black">
+              {termUrl ? (
+                <iframe
+                  title="ttyd"
+                  src={termUrl}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: 'none', backgroundColor: '#000' }}
+                  allow="clipboard-read; clipboard-write; fullscreen; autoplay"
+                  referrerPolicy="no-referrer"
+                  sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-downloads"
+                />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center text-sm text-neutral-400">No terminal URL</div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* TTY Terminal Modal */}
+      <TtyModal 
+        open={ttyOpen}
+        onOpenChange={setTtyOpen}
+        agentName={ttyAgent || undefined}
+        component={ttyComponent || undefined}
+        ttyUrl="http://localhost:7681/"
+        mode="sheet"
+      />
     </div>
   );
 } 
